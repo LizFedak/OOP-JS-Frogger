@@ -1,30 +1,35 @@
 let rls = require('readline-sync');
 
 class Frog {
-  constructor(height, depth) {
-    this.icon = "🐸";
+  constructor(height, depth, icon = "🐸") {
+    this.icon = icon;
     this.lives = 3;
     this.height = height;
     this.depth = depth;
     this.wonRound = false;
     this.didNotDie = true;
-
+    this.direction;
+    this.outOfBounds = false;
+    this.hitByCar = false;
   }
 }
 
 class Obstacles {
   constructor() {
     this.obstacles = {};
-    this.startNumber();
-    for (let counter = 0; counter <= this.counter; counter++ ) {
-      this.obstacles[String(counter)] = new Obstacle(true);
+    this.counter;
+    this.addCounterGenerator;
+    this.lastkey;
+    this.startingNumberOfObstacles();
+    for (let count = 0; count <= this.counter; count++ ) {
+      this.obstacles[String(count)] = new Obstacle(true);
     }
   }
-  startNumber() {
+  startingNumberOfObstacles() {
     this.counter = Math.floor(Math.random() * 10) + 1;
   }
   addNumber() {
-    this.addCounter = Math.floor(Math.random() * 3) + 1;
+    this.addCounterGenerator = Math.floor(Math.random() * 3) + 1;
   }
   lastKey() {
     this.lastkey = Math.max(...Object.keys(this.obstacles)) + 1;
@@ -32,13 +37,12 @@ class Obstacles {
 }
 
 class Obstacle {
-  constructor(newGame) {
-    this.icon = "🚗";
+  constructor(newGame, icon = "🚗") {
+    this.icon = icon;
     this.startHeight();
     this.new = newGame;
     this.startDepth();
     this.legal = true;
-    
   }
   move() {
     this.depth -= 1;
@@ -87,6 +91,7 @@ class FroggerGame {
     this.lane = new Lane();
     this.keepPlaying = true;
     this.points = 0;
+    this.newGame = true;
   } 
 
   addObstaclesStart() {
@@ -98,14 +103,12 @@ class FroggerGame {
     }
   }
   addMoreObstacles() {
-    
     let obj = this.obstacles.obstacles
     this.obstacles.addNumber();
     this.obstacles.lastKey();
     let count = Number(String(this.obstacles.lastkey));
-    let max = this.obstacles.addCounter + count;
+    let max = this.obstacles.addCounterGenerator + count;
     for (count; count < max; count++ ) {
-
       obj[String(count)] = new Obstacle(false);
       for (const key in obj) {
         let height = obj[key].height;
@@ -115,71 +118,59 @@ class FroggerGame {
     }
   }
 
-
   froggieStart() {
     let height = this.player.height;
     let depth = this.player.depth;
     this.landscape.lanes[height][depth] = this.player.icon;
   }
 
-  moveUp(lanes) {
-    // console.log(lanes);
-    if (this.player.height - 1 === 0) {
+  checkOutOfBounds() {
+    this.player.outOfBounds = (this.player.height - 1 === 0 && this.player.direction === "up") || (this.player.height + 1 === 6 && this.player.direction === "down") || (this.player.depth - 1 < 0 && this.player.direction === "left") || (this.player.depth + 1 === 20 && this.player.direction === "right");
+  }
+
+  moveIcon(lanes, direction) {
+    lanes[this.player.height][this.player.depth] = this.lane.square;
+    switch (direction) {
+      case "up":
+        this.player.height -= 1;
+        break;
+      case "down":
+        this.player.height += 1;
+        break;
+      case "left":
+        this.player.depth -= 1;
+        break;
+      case "right":
+        this.player.depth += 1;
+        break;
+    }
+    lanes[this.player.height][this.player.depth] = this.player.icon;
+  }
+
+  move(lanes, direction) {
+    this.player.direction = direction;
+    this.checkOutOfBounds();
+    this.checkHitByCar(lanes);
+
+    if (this.player.outOfBounds) {
+      if (this.player.direction === "up") {
       this.gameOver();
       this.froggerWon();
-    } else if (lanes[this.player.height - 1][this.player.depth] === this.obstacle.icon ) {
+      } else {
+        console.log("Missed turn");
+      }
+    } else if (this.player.hitByCar) {
       this.gameOver();
       this.collision();
     } else {
-      lanes[this.player.height][this.player.depth] = this.lane.square;
-      lanes[this.player.height - 1][this.player.depth] = this.player.icon;
-      this.player.height -= 1;
+      this.moveIcon(lanes, direction);
       return lanes;
     }
   }
-  moveDown(lanes) {
-    // console.log(this.player.height);
-    if (this.player.height + 1 === 6) {
-      console.log("INVALID MOVE - MISS A TURN");
-      return lanes;
-    } else if (lanes[this.player.height + 1][this.player.depth] === this.obstacle.icon ) {
-      this.gameOver();
-      this.collision();
-    } else {
-      lanes[this.player.height][this.player.depth] = this.lane.square;
-      lanes[this.player.height + 1][this.player.depth] = this.player.icon;
-      this.player.height += 1;
-      return lanes;
-    }
-  }
-
-  moveLeft(lanes) {
-    if (this.player.depth - 1 < 0) {
-      console.log("INVALID MOVE - MISS A TURN");
-      return lanes;
-    } else if (lanes[this.player.height][this.player.depth - 1] === this.obstacle.icon ) {
-      this.gameOver();
-      this.collision();
-    } else {
-      lanes[this.player.height][this.player.depth] = this.lane.square;
-      lanes[this.player.height][this.player.depth - 1] = this.player.icon;
-      this.player.depth -= 1;
-      return lanes;
-    }
-  }
-
-  moveRight(lanes) {
-    if (this.player.depth + 1 === 20) {
-      console.log("INVALID MOVE - MISS A TURN");
-      return lanes;
-    } else if (lanes[this.player.height][this.player.depth + 1] === this.obstacle.icon ) {
-      this.gameOver();
-      this.collision();
-    } else {
-      lanes[this.player.height][this.player.depth] = this.lane.square;
-      lanes[this.player.height][this.player.depth + 1] = this.player.icon;
-      this.player.depth += 1;
-      return lanes;
+  checkHitByCar(input) {
+    let lanes = input;
+    if (lanes[this.player.height - 1][this.player.depth] === this.obstacle.icon && this.player.direction === "up") {
+      this.player.hitByCar = true;
     }
   }
 
@@ -196,16 +187,16 @@ class FroggerGame {
       let nextMove = rls.question("Your turn > ");;      
       switch (nextMove) {
         case '[A':
-          this.moveUp(this.landscape.lanes);
+          this.move(this.landscape.lanes, "up");
           break;
         case '[B':
-          this.moveDown(this.landscape.lanes);
+          this.move(this.landscape.lanes, "down");
           break;
         case '[C':
-          this.moveRight(this.landscape.lanes);
+          this.move(this.landscape.lanes, "right");
           break;
         case '[D':
-          this.moveLeft(this.landscape.lanes);
+          this.move(this.landscape.lanes, "left");
           break;
       };
       this.moveObstacles();
@@ -213,7 +204,7 @@ class FroggerGame {
       if (!this.wonRound) {
         this.testForCollision();
       }
-      // console.clear();
+      console.clear();
     }
     while (this.player.lives > 0) {
       if (this.player.didNotDie === true) {
@@ -224,9 +215,8 @@ class FroggerGame {
       }
     }
     this.askToPlayAgain();
-    console.log(this.continuePlaying);
+    // console.log(this.continuePlaying);
     this.continuePlaying === "yes" ? this.playAgain() : console.log("Goodbye");
-
   }
 
   testForCollision() {
@@ -271,11 +261,7 @@ class FroggerGame {
     if (player.lives === 0) {
       this.player = new Frog(this.landscape.lanes.length - 1, this.landscape.lanes[0].length / 2 );
     }
-    // console.log(this.player.lives)
-    // this.player = player;
     this.landscape = new Landscape();
-    // this.player = new Frog(this.landscape.lanes.length - 1, this.landscape.lanes[0].length / 2 );
-    
     this.obstacles = new Obstacles();
     this.obstacle = new Obstacle();
     this.lane = new Lane();
@@ -303,13 +289,14 @@ class FroggerGame {
   }
 
   displayWelcomeMessage() {
-    console.log("Welcome to Frogger! To control Frogger, use your keyboard arrow keys. This is Frogger Checkers, so the obstacles won't move until you do. The obstacles will advance one spot ahead each time you move. If they hit you, Frogger loses a life. If you are hit 3 times, the game is over.");
+    if (this.newGame) {
+      console.log("Welcome to Frogger! To control Frogger, use your keyboard arrow keys. This is Frogger Checkers, so the obstacles won't move until you do. The obstacles will advance one spot ahead each time you move. If they hit you, Frogger loses a life. If you are hit 3 times, the game is over.");
+    }
+    this.newGame = false;
   }
   gameOver() {
-    // console.clear();
+    console.clear();
     this.keepPlaying = false;
-    
-    // return this.collision() || this.froggerWon();
   }
 
   collision() {
