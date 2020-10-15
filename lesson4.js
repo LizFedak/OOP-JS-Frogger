@@ -1,7 +1,7 @@
 let rls = require('readline-sync');
 
 class Frog {
-  constructor(height = 3, depth = 4) {
+  constructor(height, depth) {
     this.icon = "🐸";
     this.lives = 3;
     this.height = height;
@@ -37,7 +37,7 @@ class Obstacle {
 
 class Lane {
   constructor() {
-    this.lane = (new Array(10)).fill("_");
+    this.lane = (new Array(20)).fill("_");
   }
   display() {
     console.log(this.lane.join(""));
@@ -47,12 +47,12 @@ class Lane {
 class Landscape {
   constructor() {
     this.lanes = [];
-    for (let counter = 0; counter <= 2; counter++ ) {
+    for (let counter = 0; counter <= 5; counter++ ) {
       this.lanes.push(new Lane().lane);
     }
-    let startLane = (new Array(9)).fill("_");
-    startLane[4] = "🐸";
-    this.lanes.push(startLane);
+    // let startLane = (new Array(19)).fill("_");
+    // startLane[4] = "🐸";
+    // this.lanes.push(startLane);
   }
   display() {
     this.lanes.forEach(lane => console.log(lane.join("")));
@@ -62,21 +62,27 @@ class Landscape {
 class FroggerGame {
   constructor() {
     this.landscape = new Landscape();
-    this.player = new Frog();
+    this.player = new Frog(this.landscape.lanes.length - 1, this.landscape.lanes[0].length / 2 );
     this.obstacles = new Obstacles();
     this.obstacle = new Obstacle();
   } 
   addObstacles() {
     let obj = this.obstacles.obstacles;
     for (const key in obj) {
-      console.log(obj[key].height);
+      // console.log(obj[key].height);
       let height = obj[key].height;
-      let depth = obj[key].height;
+      let depth = obj[key].depth;
       this.landscape.lanes[height][depth] = this.obstacle.icon;
-      console.log(this.obstacles.obstacles[key])
+      // console.log(this.obstacles.obstacles[key])
       obj[key].depth = obj[key].depth - 1;
-      console.log(this.obstacles.obstacles[key])
+      // console.log(this.obstacles.obstacles[key])
     }
+  }
+  
+  froggieStart() {
+    let height = this.player.height;
+    let depth = this.player.depth;
+    this.landscape.lanes[height][depth] = this.player.icon;
   }
 
   moveUp(lanes) {
@@ -86,6 +92,7 @@ class FroggerGame {
     return lanes;
   }
   moveDown(lanes) {
+ 
     lanes[this.player.height][this.player.depth] = "_";
     lanes[this.player.height + 1][this.player.depth] = this.player.icon;
     this.player.height += 1;
@@ -108,13 +115,12 @@ class FroggerGame {
 
   play() {
     this.displayWelcomeMessage();
-  
+    this.addObstacles();
+    this.froggieStart();
+
     while (true) {
       this.landscape.display();
-      this.addObstacles();
-      console.log("HERE")
-      this.landscape.display();
-      let nextMove = rls.question("Take a step: ");
+      let nextMove = rls.question("Your turn > ");
       switch (nextMove) {
         case '[A':
           this.moveUp(this.landscape.lanes);
@@ -129,14 +135,14 @@ class FroggerGame {
           this.moveLeft(this.landscape.lanes);
           break;
       };
-      this.landscape.display();
+      // this.landscape.display();
       // if (this.gameOver()) break;
     }
   }
 
 
   displayWelcomeMessage() {
-    console.log("Welcome to Frogger!");
+    console.log("Welcome to Frogger! To control Frogger, use your keyboard arrow keys. This is Frogger Checkers, so the obstacles won't move until you do. The obstacles will advance one spot ahead each time you move. If they hit you, Frogger dies.");
   }
   gameOver() {
     return this.collision() || this.froggerWon();
